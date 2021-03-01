@@ -10,10 +10,11 @@ void vPIDAutotunerInit(PIDAutotuner_t *pxPIDAutotuner)
   pxPIDAutotuner->loopInterval = 0;
   pxPIDAutotuner->znMode = ZNModeNoOvershoot;
   pxPIDAutotuner->cycles = 10;
+	
+	pxPIDAutotuner->outputValue = 0.0f;
 
   pxPIDAutotuner->integrator = 0.0f;
   pxPIDAutotuner->prevMeasurement = 0.0f;
-  pxPIDAutotuner->out = 0.0f;
 }
 // Set target input for tuning
 void vPIDAutotunerSetTargetInputValue(PIDAutotuner_t *pxPIDAutotuner, float target)
@@ -216,21 +217,21 @@ float fPIDAutotunerTuneUpdate(PIDAutotuner_t *pxPIDAutotuner,
     {
       pxPIDAutotuner->integrator = pxPIDAutotuner->minInt;
     }
-    pxPIDAutotuner->out = pxPIDAutotuner->kp * error +
+    pxPIDAutotuner->outputValue = pxPIDAutotuner->kp * error +
                           pxPIDAutotuner->integrator -
                           pxPIDAutotuner->kd / pxPIDAutotuner->T * (measurement - pxPIDAutotuner->prevMeasurement);
     //输出限制
-    if (pxPIDAutotuner->out > pxPIDAutotuner->maxOutput)
+    if (pxPIDAutotuner->outputValue > pxPIDAutotuner->maxOutput)
     {
-      pxPIDAutotuner->out = pxPIDAutotuner->maxOutput;
+      pxPIDAutotuner->outputValue = pxPIDAutotuner->maxOutput;
     }
-    else if (pxPIDAutotuner->out < pxPIDAutotuner->minOutput)
+    else if (pxPIDAutotuner->outputValue < pxPIDAutotuner->minOutput)
     {
-      pxPIDAutotuner->out = pxPIDAutotuner->minOutput;
+      pxPIDAutotuner->outputValue = pxPIDAutotuner->minOutput;
     }
     //存储上一次的测量值
     pxPIDAutotuner->prevMeasurement = measurement;
   }
 
-  return pxPIDAutotuner->out;
+  return pxPIDAutotuner->outputValue;
 }

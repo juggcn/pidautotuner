@@ -49,9 +49,6 @@ typedef struct
   float integrator;
   float prevMeasurement; /* Required for differentiator */
 
-  /* Controller output */
-  float out;
-
 } PIDAutotuner_t;
 
 // Configure parameters for PID tuning
