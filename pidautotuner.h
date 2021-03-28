@@ -38,10 +38,6 @@ typedef struct
   float pAverage, iAverage, dAverage;
   float kp, ki, kd;
 
-  /* Integrator limits */
-  float minInt;
-  float maxInt;
-
   /* Sample time (in seconds) */
   float T;
 
