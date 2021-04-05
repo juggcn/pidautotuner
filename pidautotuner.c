@@ -55,8 +55,8 @@ void vPIDAutotunerStartTuningLoop(PIDAutotuner_t *pxPIDAutotuner, long long us)
   pxPIDAutotuner->outputValue = pxPIDAutotuner->maxOutput;
   pxPIDAutotuner->t1 = pxPIDAutotuner->t2 = us;                                    // Times used for calculating period
   pxPIDAutotuner->microseconds = pxPIDAutotuner->tHigh = pxPIDAutotuner->tLow = 0; // More time variables
-  pxPIDAutotuner->max = -10000;                                                    // Max input
-  pxPIDAutotuner->min = 10000;                                                     // Min input
+  pxPIDAutotuner->max = -1000000;                                                    // Max input
+  pxPIDAutotuner->min = 1000000;                                                     // Min input
   pxPIDAutotuner->pAverage = pxPIDAutotuner->iAverage = pxPIDAutotuner->dAverage = 0;
 }
 
