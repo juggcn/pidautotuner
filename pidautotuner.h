@@ -7,7 +7,7 @@
 
 #include "stdbool.h"
 
-#pragma anon_unions
+//#pragma anon_unions
 #pragma pack(1)
 
 #ifndef M_PI
