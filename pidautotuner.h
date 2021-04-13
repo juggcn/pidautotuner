@@ -38,6 +38,8 @@ typedef struct
   float pAverage, iAverage, dAverage;
   float kp, ki, kd;
 
+  float kc;  
+
   /* Sample time (in seconds) */
   float T;
 

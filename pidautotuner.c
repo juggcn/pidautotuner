@@ -214,12 +214,12 @@ float fPIDAutotunerTuneUpdate(PIDAutotuner_t *pxPIDAutotuner,
     //输出限制
     if (pxPIDAutotuner->outputValue > pxPIDAutotuner->maxOutput)
     {
-      pxPIDAutotuner->integrator += pxPIDAutotuner->maxOutput - pxPIDAutotuner->outputValue;
+      pxPIDAutotuner->integrator += kc * (pxPIDAutotuner->maxOutput - pxPIDAutotuner->outputValue);
       pxPIDAutotuner->outputValue = pxPIDAutotuner->maxOutput;
     }
     else if (pxPIDAutotuner->outputValue < pxPIDAutotuner->minOutput)
     {
-      pxPIDAutotuner->integrator += pxPIDAutotuner->minOutput - pxPIDAutotuner->outputValue;
+      pxPIDAutotuner->integrator += kc * (pxPIDAutotuner->minOutput - pxPIDAutotuner->outputValue);
       pxPIDAutotuner->outputValue = pxPIDAutotuner->minOutput;
     }
     //存储上一次的测量值
