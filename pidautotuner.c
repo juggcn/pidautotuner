@@ -18,8 +18,6 @@ void vPIDAutotunerInit(PIDAutotuner_t *pxPIDAutotuner)
 
   pxPIDAutotuner->kc = 1.0f;
 
-  pxPIDAutotuner->T = 1.0f;
-
   pxPIDAutotuner->integrator = 0.0f;
   pxPIDAutotuner->prevMeasurement = 0.0f;
 }
