@@ -22,6 +22,12 @@ typedef enum
   ZNModeNoOvershoot
 } ZNMode;
 
+typedef enum
+{
+  AWModeNormal,
+  AWModeAhead,
+} AWMode;
+
 typedef struct
 {
   float targetInputValue;
@@ -33,18 +39,22 @@ typedef struct
   unsigned int i;
   bool output;
   float outputValue;
+  float outputValuePrev;
   long long microseconds, t1, t2, tHigh, tLow;
   float max, min;
   float pAverage, iAverage, dAverage;
   float kp, ki, kd;
 
-  float kc;  
+  AWMode awMode;
+
+  float kc;
 
   /* Sample time (in seconds) */
   float T;
 
   /* Controller "memory" */
   float integrator;
+  float prevError;
   float prevMeasurement; /* Required for differentiator */
 
 } PIDAutotuner_t;
@@ -78,6 +88,9 @@ extern float fPIDAutotunerGetKd(PIDAutotuner_t *pxPIDAutotuner);
 
 extern bool bPIDAutotunerIsFinished(PIDAutotuner_t *pxPIDAutotuner); // Is the tuning finished?
 
+extern void vPIDAutotunerSetAWMode(PIDAutotuner_t *pxPIDAutotuner, AWMode AW);
+extern void vPIDAutotunerSetKc(PIDAutotuner_t *pxPIDAutotuner, float kc);
+extern void vPIDAutotunerSetSimpleTime(PIDAutotuner_t *pxPIDAutotuner, float t);
 extern float fPIDAutotunerTuneUpdate(PIDAutotuner_t *pxPIDAutotuner,
                                      float setpoint, float measurement);
 

@@ -10,8 +10,15 @@ void vPIDAutotunerInit(PIDAutotuner_t *pxPIDAutotuner)
   pxPIDAutotuner->loopInterval = 0;
   pxPIDAutotuner->znMode = ZNModeNoOvershoot;
   pxPIDAutotuner->cycles = 10;
-	
-	pxPIDAutotuner->outputValue = 0.0f;
+
+  pxPIDAutotuner->outputValue = 0.0f;
+  pxPIDAutotuner->outputValuePrev = 0.0f;
+
+  pxPIDAutotuner->awMode = AWModeNormal;
+
+  pxPIDAutotuner->kc = 1.0f;
+
+  pxPIDAutotuner->T = 1.0f;
 
   pxPIDAutotuner->integrator = 0.0f;
   pxPIDAutotuner->prevMeasurement = 0.0f;
@@ -55,8 +62,8 @@ void vPIDAutotunerStartTuningLoop(PIDAutotuner_t *pxPIDAutotuner, long long us)
   pxPIDAutotuner->outputValue = pxPIDAutotuner->maxOutput;
   pxPIDAutotuner->t1 = pxPIDAutotuner->t2 = us;                                    // Times used for calculating period
   pxPIDAutotuner->microseconds = pxPIDAutotuner->tHigh = pxPIDAutotuner->tLow = 0; // More time variables
-  pxPIDAutotuner->max = -1000000;                                                    // Max input
-  pxPIDAutotuner->min = 1000000;                                                     // Min input
+  pxPIDAutotuner->max = -1000000;                                                  // Max input
+  pxPIDAutotuner->min = 1000000;                                                   // Min input
   pxPIDAutotuner->pAverage = pxPIDAutotuner->iAverage = pxPIDAutotuner->dAverage = 0;
 }
 
@@ -200,6 +207,21 @@ bool bPIDAutotunerIsFinished(PIDAutotuner_t *pxPIDAutotuner)
   return (pxPIDAutotuner->i >= pxPIDAutotuner->cycles);
 }
 
+void vPIDAutotunerSetAWMode(PIDAutotuner_t *pxPIDAutotuner, AWMode AW)
+{
+  pxPIDAutotuner->awMode = AW;
+}
+
+void vPIDAutotunerSetKc(PIDAutotuner_t *pxPIDAutotuner, float kc)
+{
+  pxPIDAutotuner->kc = kc;
+}
+
+void vPIDAutotunerSetSimpleTime(PIDAutotuner_t *pxPIDAutotuner, float t)
+{
+  pxPIDAutotuner->T = t;
+}
+
 float fPIDAutotunerTuneUpdate(PIDAutotuner_t *pxPIDAutotuner,
                               float setpoint, float measurement)
 {
@@ -207,22 +229,55 @@ float fPIDAutotunerTuneUpdate(PIDAutotuner_t *pxPIDAutotuner,
   {
     float error = setpoint - measurement;
 
-    pxPIDAutotuner->integrator += pxPIDAutotuner->ki * pxPIDAutotuner->T * error;
-    pxPIDAutotuner->outputValue = pxPIDAutotuner->kp * error +
-                          pxPIDAutotuner->integrator -
-                          pxPIDAutotuner->kd / pxPIDAutotuner->T * (measurement - pxPIDAutotuner->prevMeasurement);
-    //输出限制
-    if (pxPIDAutotuner->outputValue > pxPIDAutotuner->maxOutput)
+    float proportional = pxPIDAutotuner->kp * error;
+
+    pxPIDAutotuner->integrator += pxPIDAutotuner->ki * pxPIDAutotuner->T * (error - pxPIDAutotuner->prevError);
+
+    if (pxPIDAutotuner->awMode == AWModeAhead)  
     {
-      pxPIDAutotuner->integrator += pxPIDAutotuner->kc * (pxPIDAutotuner->maxOutput - pxPIDAutotuner->outputValue);
+      float limMinInt = 0.0f, limMaxInt = 0.0f;
+      if (pxPIDAutotuner->maxOutput > proportional)
+      {
+        limMaxInt = pxPIDAutotuner->maxOutput - proportional;
+      }
+      if (pxPIDAutotuner->minOutput < proportional)
+      {
+        limMinInt = pxPIDAutotuner->minOutput - proportional;
+      }
+
+      if (pxPIDAutotuner->integrator > limMaxInt)
+      {
+        pxPIDAutotuner->integrator = limMaxInt;
+      }
+      else if (pxPIDAutotuner->integrator < limMinInt)
+      {
+        pxPIDAutotuner->integrator = limMinInt;
+      }
+    }
+
+    pxPIDAutotuner->outputValuePrev = proportional +
+                                      pxPIDAutotuner->integrator -
+                                      pxPIDAutotuner->kd / pxPIDAutotuner->T * (measurement - pxPIDAutotuner->prevMeasurement);
+
+    if (pxPIDAutotuner->outputValuePrev > pxPIDAutotuner->maxOutput)
+    {
       pxPIDAutotuner->outputValue = pxPIDAutotuner->maxOutput;
     }
-    else if (pxPIDAutotuner->outputValue < pxPIDAutotuner->minOutput)
+    else if (pxPIDAutotuner->outputValuePrev < pxPIDAutotuner->minOutput)
     {
-      pxPIDAutotuner->integrator += pxPIDAutotuner->kc * (pxPIDAutotuner->minOutput - pxPIDAutotuner->outputValue);
       pxPIDAutotuner->outputValue = pxPIDAutotuner->minOutput;
     }
+    else
+    {
+      pxPIDAutotuner->outputValue = pxPIDAutotuner->outputValuePrev;
+    }
+
+    if (pxPIDAutotuner->awMode == AWModeNormal)
+    {
+      pxPIDAutotuner->integrator += pxPIDAutotuner->kc * (pxPIDAutotuner->outputValue - pxPIDAutotuner->outputValuePrev);
+    }
     //存储上一次的测量值
+    pxPIDAutotuner->prevError = error;
     pxPIDAutotuner->prevMeasurement = measurement;
   }
 
