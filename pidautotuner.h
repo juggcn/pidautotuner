@@ -55,7 +55,6 @@ typedef struct
   /* Controller "memory" */
   float integrator;
   float prevError;
-  float prevMeasurement; /* Required for differentiator */
 
 } PIDAutotuner_t;
 
