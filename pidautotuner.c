@@ -231,7 +231,7 @@ float fPIDAutotunerTuneUpdate(PIDAutotuner_t *pxPIDAutotuner,
 
     pxPIDAutotuner->integrator += pxPIDAutotuner->ki * pxPIDAutotuner->T * error;
 
-    if (pxPIDAutotuner->awMode == AWModeAhead)  
+    if (pxPIDAutotuner->awMode == AWModeAhead)
     {
       float limMinInt = 0.0f, limMaxInt = 0.0f;
       if (pxPIDAutotuner->maxOutput > proportional)
