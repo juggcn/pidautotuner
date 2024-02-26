@@ -4,69 +4,69 @@
 
 #include "pidautotuner.h"
 
-void vPIDAutotunerInit(PIDAutotuner_t *pxPIDAutotuner)
+void vPIDAutotunerInit(PIDAutotuner_t *pxPID)
 {
-  pxPIDAutotuner->targetInputValue = 0;
-  pxPIDAutotuner->loopInterval = 0;
-  pxPIDAutotuner->znMode = ZNModeNoOvershoot;
-  pxPIDAutotuner->cycles = 10;
+  pxPID->targetInputValue = 0;
+  pxPID->loopInterval = 0;
+  pxPID->znMode = ZNModeNoOvershoot;
+  pxPID->cycles = 10;
 
-  pxPIDAutotuner->outputValue = 0.0f;
-  pxPIDAutotuner->outputValuePrev = 0.0f;
+  pxPID->outputValue = 0.0f;
 
-  pxPIDAutotuner->awMode = AWModeNormal;
-
-  pxPIDAutotuner->kc = 1.0f;
-
-  pxPIDAutotuner->integrator = 0.0f;
-  pxPIDAutotuner->prevError = 0.0f;
+  pxPID->integrator = 0.0f;
+  pxPID->prevError = 0.0f;
+  pxPID->differentiator = 0.0f;
+  pxPID->prevMeasurement = 0.0f;
 }
 // Set target input for tuning
-void vPIDAutotunerSetTargetInputValue(PIDAutotuner_t *pxPIDAutotuner, float target)
+void vPIDAutotunerSetTargetInputValue(PIDAutotuner_t *pxPID, float target)
 {
-  pxPIDAutotuner->targetInputValue = target;
+  pxPID->targetInputValue = target;
 }
 
 // Set loop interval
-void vPIDAutotunerSetLoopInterval(PIDAutotuner_t *pxPIDAutotuner, unsigned int interval)
+void vPIDAutotunerSetLoopInterval(PIDAutotuner_t *pxPID, unsigned int interval)
 {
-  pxPIDAutotuner->loopInterval = interval;
+  pxPID->loopInterval = interval;
 }
 
 // Set output range
-void vPIDAutotunerSetOutputRange(PIDAutotuner_t *pxPIDAutotuner, float min, float max)
+void vPIDAutotunerSetOutputRange(PIDAutotuner_t *pxPID, float min, float max)
 {
-  pxPIDAutotuner->minOutput = min;
-  pxPIDAutotuner->maxOutput = max;
+  pxPID->minOutput = min;
+  pxPID->maxOutput = max;
+
+  pxPID->minOutputInt = min;
+  pxPID->maxOutputInt = max;
 }
 
 // Set Ziegler-Nichols tuning mode
-void vPIDAutotunerSetZNMode(PIDAutotuner_t *pxPIDAutotuner, ZNMode zn)
+void vPIDAutotunerSetZNMode(PIDAutotuner_t *pxPID, ZNMode zn)
 {
-  pxPIDAutotuner->znMode = zn;
+  pxPID->znMode = zn;
 }
 
 // Set tuning cycles
-void vPIDAutotunerSetTuningCycles(PIDAutotuner_t *pxPIDAutotuner, unsigned int tuneCycles)
+void vPIDAutotunerSetTuningCycles(PIDAutotuner_t *pxPID, unsigned int tuneCycles)
 {
-  pxPIDAutotuner->cycles = tuneCycles;
+  pxPID->cycles = tuneCycles;
 }
 
 // Initialize all variables before loop
-void vPIDAutotunerStartTuningLoop(PIDAutotuner_t *pxPIDAutotuner, long long us)
+void vPIDAutotunerStartTuningLoop(PIDAutotuner_t *pxPID, long long us)
 {
-  pxPIDAutotuner->i = 0;      // Cycle counter
-  pxPIDAutotuner->output = 1; // Current output state
-  pxPIDAutotuner->outputValue = pxPIDAutotuner->maxOutput;
-  pxPIDAutotuner->t1 = pxPIDAutotuner->t2 = us;                                    // Times used for calculating period
-  pxPIDAutotuner->microseconds = pxPIDAutotuner->tHigh = pxPIDAutotuner->tLow = 0; // More time variables
-  pxPIDAutotuner->max = -1000000;                                                  // Max input
-  pxPIDAutotuner->min = 1000000;                                                   // Min input
-  pxPIDAutotuner->pAverage = pxPIDAutotuner->iAverage = pxPIDAutotuner->dAverage = 0;
+  pxPID->i = 0;      // Cycle counter
+  pxPID->output = 1; // Current output state
+  pxPID->outputValue = pxPID->maxOutput;
+  pxPID->t1 = pxPID->t2 = us;                           // Times used for calculating period
+  pxPID->microseconds = pxPID->tHigh = pxPID->tLow = 0; // More time variables
+  pxPID->max = -100000000;                              // Max input
+  pxPID->min = 100000000;                               // Min input
+  pxPID->pAverage = pxPID->iAverage = pxPID->dAverage = 0;
 }
 
 // Run one cycle of the loop
-float fPIDAutotunerTunePID(PIDAutotuner_t *pxPIDAutotuner, float input, long long us)
+float fPIDAutotunerTunePID(PIDAutotuner_t *pxPID, float input, long long us)
 {
   // Useful information on the algorithm used (Ziegler-Nichols method/Relay method)
   // http://www.processcontrolstuff.net/wp-content/uploads/2015/02/relay_autot-2.pdf
@@ -86,43 +86,43 @@ float fPIDAutotunerTunePID(PIDAutotuner_t *pxPIDAutotuner, float input, long lon
   //      Ziegler-Nichols method
 
   // Calculate time delta
-  //long prevMicroseconds = microseconds;
-  pxPIDAutotuner->microseconds = us;
-  //float deltaT = microseconds - prevMicroseconds;
+  // long prevMicroseconds = microseconds;
+  pxPID->microseconds = us;
+  // float deltaT = microseconds - prevMicroseconds;
 
   // Calculate max and min
-  pxPIDAutotuner->max = (pxPIDAutotuner->max > input) ? pxPIDAutotuner->max : input;
-  pxPIDAutotuner->min = (pxPIDAutotuner->min < input) ? pxPIDAutotuner->min : input;
+  pxPID->max = (pxPID->max > input) ? pxPID->max : input;
+  pxPID->min = (pxPID->min < input) ? pxPID->min : input;
 
   // Output is on and input signal has risen to target
-  if (pxPIDAutotuner->output && input > pxPIDAutotuner->targetInputValue)
+  if (pxPID->output && input > pxPID->targetInputValue)
   {
     // Turn output off, record current time as t1, calculate tHigh, and reset maximum
-    pxPIDAutotuner->output = 0;
-    pxPIDAutotuner->outputValue = pxPIDAutotuner->minOutput;
-    pxPIDAutotuner->t1 = us;
-    pxPIDAutotuner->tHigh = pxPIDAutotuner->t1 - pxPIDAutotuner->t2;
-    pxPIDAutotuner->max = pxPIDAutotuner->targetInputValue;
+    pxPID->output = 0;
+    pxPID->outputValue = pxPID->minOutput;
+    pxPID->t1 = us;
+    pxPID->tHigh = pxPID->t1 - pxPID->t2;
+    pxPID->max = pxPID->targetInputValue;
   }
 
   // Output is off and input signal has dropped to target
-  if (!pxPIDAutotuner->output && input < pxPIDAutotuner->targetInputValue)
+  if (!pxPID->output && input < pxPID->targetInputValue)
   {
     // Turn output on, record current time as t2, calculate tLow
-    pxPIDAutotuner->output = 1;
-    pxPIDAutotuner->outputValue = pxPIDAutotuner->maxOutput;
-    pxPIDAutotuner->t2 = us;
-    pxPIDAutotuner->tLow = pxPIDAutotuner->t2 - pxPIDAutotuner->t1;
+    pxPID->output = 1;
+    pxPID->outputValue = pxPID->maxOutput;
+    pxPID->t2 = us;
+    pxPID->tLow = pxPID->t2 - pxPID->t1;
 
     // Calculate Ku (ultimate gain)
     // Formula given is Ku = 4d / πa
     // d is the amplitude of the output signal
     // a is the amplitude of the input signal
-    float ku = (4.0 * ((pxPIDAutotuner->maxOutput - pxPIDAutotuner->minOutput) / 2.0)) /
-               (M_PI * (pxPIDAutotuner->max - pxPIDAutotuner->min) / 2.0);
+    float ku = (4.0 * ((pxPID->maxOutput - pxPID->minOutput) / 2.0)) /
+               (M_PI * (pxPID->max - pxPID->min) / 2.0);
 
     // Calculate Tu (period of output oscillations)
-    float tu = pxPIDAutotuner->tLow + pxPIDAutotuner->tHigh;
+    float tu = pxPID->tLow + pxPID->tHigh;
 
     // How gains are calculated
     // PID control algorithm needs Kp, Ki, and Kd
@@ -142,13 +142,13 @@ float fPIDAutotunerTunePID(PIDAutotuner_t *pxPIDAutotuner, float input, long lon
     // https://en.wikipedia.org/wiki/Ziegler%E2%80%93Nichols_method
 
     float kpConstant, tiConstant, tdConstant;
-    if (pxPIDAutotuner->znMode == ZNModeBasicPID)
+    if (pxPID->znMode == ZNModeBasicPID)
     {
       kpConstant = 0.6;
       tiConstant = 0.5;
       tdConstant = 0.125;
     }
-    else if (pxPIDAutotuner->znMode == ZNModeLessOvershoot)
+    else if (pxPID->znMode == ZNModeLessOvershoot)
     {
       kpConstant = 0.33;
       tiConstant = 0.5;
@@ -162,121 +162,136 @@ float fPIDAutotunerTunePID(PIDAutotuner_t *pxPIDAutotuner, float input, long lon
     }
 
     // Calculate gains
-    pxPIDAutotuner->kp = kpConstant * ku;
-    pxPIDAutotuner->ki = (pxPIDAutotuner->kp / (tiConstant * tu)) * pxPIDAutotuner->loopInterval;
-    pxPIDAutotuner->kd = (tdConstant * pxPIDAutotuner->kp * tu) / pxPIDAutotuner->loopInterval;
+    pxPID->kp = kpConstant * ku;
+    pxPID->ki = (pxPID->kp / (tiConstant * tu)) * pxPID->loopInterval;
+    pxPID->kd = (tdConstant * pxPID->kp * tu) / pxPID->loopInterval;
 
     // Average all gains after the first two cycles
-    if (pxPIDAutotuner->i > 1)
+    if (pxPID->i > 1)
     {
-      pxPIDAutotuner->pAverage += pxPIDAutotuner->kp;
-      pxPIDAutotuner->iAverage += pxPIDAutotuner->ki;
-      pxPIDAutotuner->dAverage += pxPIDAutotuner->kd;
+      pxPID->pAverage += pxPID->kp;
+      pxPID->iAverage += pxPID->ki;
+      pxPID->dAverage += pxPID->kd;
     }
 
     // Reset minimum
-    pxPIDAutotuner->min = pxPIDAutotuner->targetInputValue;
+    pxPID->min = pxPID->targetInputValue;
 
     // Increment cycle count
-    pxPIDAutotuner->i++;
+    pxPID->i++;
   }
 
   // If loop is done, disable output and calculate averages
-  if (pxPIDAutotuner->i >= pxPIDAutotuner->cycles)
+  if (pxPID->i >= pxPID->cycles)
   {
-    pxPIDAutotuner->output = 0;
-    pxPIDAutotuner->outputValue = pxPIDAutotuner->minOutput;
-    pxPIDAutotuner->kp = pxPIDAutotuner->pAverage / (pxPIDAutotuner->i - 1);
-    pxPIDAutotuner->ki = pxPIDAutotuner->iAverage / (pxPIDAutotuner->i - 1);
-    pxPIDAutotuner->kd = pxPIDAutotuner->dAverage / (pxPIDAutotuner->i - 1);
+    pxPID->output = 0;
+    pxPID->outputValue = pxPID->minOutput;
+    pxPID->kp = pxPID->pAverage / (pxPID->i - 1);
+    pxPID->ki = pxPID->iAverage / (pxPID->i - 1);
+    pxPID->kd = pxPID->dAverage / (pxPID->i - 1);
   }
 
-  return pxPIDAutotuner->outputValue;
+  return pxPID->outputValue;
 }
 
 // Get PID constants after tuning
-float fPIDAutotunerGetKp(PIDAutotuner_t *pxPIDAutotuner) { return pxPIDAutotuner->kp; };
-float fPIDAutotunerGetKi(PIDAutotuner_t *pxPIDAutotuner) { return pxPIDAutotuner->ki; };
-float fPIDAutotunerGetKd(PIDAutotuner_t *pxPIDAutotuner) { return pxPIDAutotuner->kd; };
+float fPIDAutotunerGetKp(PIDAutotuner_t *pxPID) { return pxPID->kp; };
+float fPIDAutotunerGetKi(PIDAutotuner_t *pxPID) { return pxPID->ki; };
+float fPIDAutotunerGetKd(PIDAutotuner_t *pxPID) { return pxPID->kd; };
 
 // Is the tuning loop finished?
-bool bPIDAutotunerIsFinished(PIDAutotuner_t *pxPIDAutotuner)
+bool bPIDAutotunerIsFinished(PIDAutotuner_t *pxPID)
 {
-  return (pxPIDAutotuner->i >= pxPIDAutotuner->cycles);
+  return (pxPID->i >= pxPID->cycles);
 }
 
-void vPIDAutotunerSetAWMode(PIDAutotuner_t *pxPIDAutotuner, AWMode AW)
-{
-  pxPIDAutotuner->awMode = AW;
-}
-
-void vPIDAutotunerSetKc(PIDAutotuner_t *pxPIDAutotuner, float kc)
-{
-  pxPIDAutotuner->kc = kc;
-}
-
-void vPIDAutotunerSetSimpleTime(PIDAutotuner_t *pxPIDAutotuner, float t)
-{
-  pxPIDAutotuner->T = t;
-}
-
-float fPIDAutotunerTuneUpdate(PIDAutotuner_t *pxPIDAutotuner,
+float fPIDAutotunerTuneUpdate(PIDAutotuner_t *pxPID,
                               float setpoint, float measurement)
 {
-  if (pxPIDAutotuner->T > 0.0f)
+  /*
+   * Error signal
+   */
+  float error = setpoint - measurement;
+
+  /*
+   * Proportional
+   */
+  float proportional = pxPID->kp * error;
+
+  /*
+   * Integral
+   */
+  pxPID->integrator = pxPID->integrator + pxPID->ki * pxPID->T * (error + pxPID->prevError);
+
+  /* Anti-wind-up via integrator clamping */
+
+#if 0
+
+  if (pxPID->integrator > pxPID->maxOutputInt)
   {
-    float error = setpoint - measurement;
 
-    float proportional = pxPIDAutotuner->kp * error;
+    pxPID->integrator = pxPID->maxOutputInt;
+  }
+  else if (pxPID->integrator < pxPID->minOutputInt)
+  {
 
-    pxPIDAutotuner->integrator += pxPIDAutotuner->ki * pxPIDAutotuner->T * error;
-
-    if (pxPIDAutotuner->awMode == AWModeAhead)
-    {
-      float limMinInt = 0.0f, limMaxInt = 0.0f;
-      if (pxPIDAutotuner->maxOutput > proportional)
-      {
-        limMaxInt = pxPIDAutotuner->maxOutput - proportional;
-      }
-      if (pxPIDAutotuner->minOutput < proportional)
-      {
-        limMinInt = pxPIDAutotuner->minOutput - proportional;
-      }
-
-      if (pxPIDAutotuner->integrator > limMaxInt)
-      {
-        pxPIDAutotuner->integrator = limMaxInt;
-      }
-      else if (pxPIDAutotuner->integrator < limMinInt)
-      {
-        pxPIDAutotuner->integrator = limMinInt;
-      }
-    }
-
-    pxPIDAutotuner->outputValuePrev = proportional +
-                                      pxPIDAutotuner->integrator -
-                                      pxPIDAutotuner->kd / pxPIDAutotuner->T * (error - pxPIDAutotuner->prevError);
-
-    if (pxPIDAutotuner->outputValuePrev > pxPIDAutotuner->maxOutput)
-    {
-      pxPIDAutotuner->outputValue = pxPIDAutotuner->maxOutput;
-    }
-    else if (pxPIDAutotuner->outputValuePrev < pxPIDAutotuner->minOutput)
-    {
-      pxPIDAutotuner->outputValue = pxPIDAutotuner->minOutput;
-    }
-    else
-    {
-      pxPIDAutotuner->outputValue = pxPIDAutotuner->outputValuePrev;
-    }
-
-    if (pxPIDAutotuner->awMode == AWModeNormal)
-    {
-      pxPIDAutotuner->integrator += pxPIDAutotuner->kc * (pxPIDAutotuner->outputValue - pxPIDAutotuner->outputValuePrev);
-    }
-    //存储上一次的测量值
-    pxPIDAutotuner->prevError = error;
+    pxPID->integrator = pxPID->minOutputInt;
   }
 
-  return pxPIDAutotuner->outputValue;
+#else
+
+  float minOutputInt = pxPID->minOutput, maxOutputInt = pxPID->maxOutput;
+
+  if (pxPID->maxOutput > proportional)
+  {
+    maxOutputInt = pxPID->maxOutput - proportional;
+  }
+  if (pxPID->minOutput < proportional)
+  {
+    minOutputInt = pxPID->minOutput - proportional;
+  }
+
+  if (pxPID->integrator > maxOutputInt)
+  {
+    pxPID->integrator = maxOutputInt;
+  }
+  else if (pxPID->integrator < minOutputInt)
+  {
+    pxPID->integrator = minOutputInt;
+  }
+
+#endif
+
+  /*
+   * Derivative (band-limited differentiator)
+   */
+
+  pxPID->differentiator = -(2.0f * pxPID->kd * (measurement - pxPID->prevMeasurement) /* Note: derivative on measurement, therefore minus sign in front of equation! */
+                            + (2.0f * pxPID->tau - pxPID->T) * pxPID->differentiator) /
+                          (2.0f * pxPID->tau + pxPID->T);
+
+  /*
+   * Compute output and apply limits
+   */
+  pxPID->out = proportional + pxPID->integrator + pxPID->differentiator;
+
+  if (pxPID->out > pxPID->maxOutput)
+  {
+
+    pxPID->out = pxPID->maxOutput;
+  }
+  else if (pxPID->out < pxPID->minOutput)
+  {
+
+    pxPID->out = pxPID->minOutput;
+  }
+
+  /* Store error and measurement for later use */
+  pxPID->prevError = error;
+  pxPID->prevMeasurement = measurement;
+
+  pxPID->outputValue = pxPID->out;
+
+  /* Return controller output */
+  return pxPID->out;
 }

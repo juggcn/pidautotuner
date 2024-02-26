@@ -6,8 +6,9 @@
 #define PIDAUTOTUNER_H
 
 #include "stdbool.h"
+#include "stdint.h"
 
-//#pragma anon_unions
+// #pragma anon_unions
 #pragma pack(1)
 
 #ifndef M_PI
@@ -22,12 +23,6 @@ typedef enum
   ZNModeNoOvershoot
 } ZNMode;
 
-typedef enum
-{
-  AWModeNormal,
-  AWModeAhead,
-} AWMode;
-
 typedef struct
 {
   float targetInputValue;
@@ -39,22 +34,28 @@ typedef struct
   unsigned int i;
   bool output;
   float outputValue;
-  float outputValuePrev;
-  long long microseconds, t1, t2, tHigh, tLow;
+  unsigned int microseconds, t1, t2, tHigh, tLow;
   float max, min;
   float pAverage, iAverage, dAverage;
   float kp, ki, kd;
 
-  AWMode awMode;
+  /* Derivative low-pass filter time constant */
+  float tau;
 
-  float kc;
+  /* Integrator limits */
+  float minOutputInt, maxOutputInt;
 
   /* Sample time (in seconds) */
   float T;
 
   /* Controller "memory" */
   float integrator;
-  float prevError;
+  float prevError; /* Required for integrator */
+  float differentiator;
+  float prevMeasurement; /* Required for differentiator */
+
+  /* Controller output */
+  float out;
 
 } PIDAutotuner_t;
 
@@ -65,32 +66,28 @@ typedef struct
 // outputRange: min and max values of the output that can be used to control the system (0, 255 for analogWrite)
 // znMode: Ziegler-Nichols tuning mode (znModeBasicPID, znModeLessOvershoot, znModeNoOvershoot)
 // tuningCycles: number of cycles that the tuning runs for (optional, default is 10)
-extern void vPIDAutotunerInit(PIDAutotuner_t *pxPIDAutotuner);
-extern void vPIDAutotunerSetTargetInputValue(PIDAutotuner_t *pxPIDAutotuner, float target);
-extern void vPIDAutotunerSetLoopInterval(PIDAutotuner_t *pxPIDAutotuner, unsigned int interval);
-extern void vPIDAutotunerSetOutputRange(PIDAutotuner_t *pxPIDAutotuner, float min, float max);
-extern void vPIDAutotunerSetZNMode(PIDAutotuner_t *pxPIDAutotuner, ZNMode zn);
-extern void vPIDAutotunerSetTuningCycles(PIDAutotuner_t *pxPIDAutotuner, unsigned int tuneCycles);
+extern void vPIDAutotunerInit(PIDAutotuner_t *pxPID);
+extern void vPIDAutotunerSetTargetInputValue(PIDAutotuner_t *pxPID, float target);
+extern void vPIDAutotunerSetLoopInterval(PIDAutotuner_t *pxPID, unsigned int interval);
+extern void vPIDAutotunerSetOutputRange(PIDAutotuner_t *pxPID, float min, float max);
+extern void vPIDAutotunerSetZNMode(PIDAutotuner_t *pxPID, ZNMode zn);
+extern void vPIDAutotunerSetTuningCycles(PIDAutotuner_t *pxPID, unsigned int tuneCycles);
 
 // Must be called immediately before the tuning loop starts
-extern void vPIDAutotunerStartTuningLoop(PIDAutotuner_t *pxPIDAutotuner, long long us);
+extern void vPIDAutotunerStartTuningLoop(PIDAutotuner_t *pxPID, long long us);
 
 // Automatically tune PID
 // This function must be run in a loop at the same speed as the PID loop being tuned
 // See README for more details - https://github.com/jackw01/arduino-pid-autotuner/blob/master/README.md
-extern float fPIDAutotunerTunePID(PIDAutotuner_t *pxPIDAutotuner, float input, long long us);
+extern float fPIDAutotunerTunePID(PIDAutotuner_t *pxPID, float input, long long us);
 
 // Get results of most recent tuning
-extern float fPIDAutotunerGetKp(PIDAutotuner_t *pxPIDAutotuner);
-extern float fPIDAutotunerGetKi(PIDAutotuner_t *pxPIDAutotuner);
-extern float fPIDAutotunerGetKd(PIDAutotuner_t *pxPIDAutotuner);
+extern float fPIDAutotunerGetKp(PIDAutotuner_t *pxPID);
+extern float fPIDAutotunerGetKi(PIDAutotuner_t *pxPID);
+extern float fPIDAutotunerGetKd(PIDAutotuner_t *pxPID);
+extern bool bPIDAutotunerIsFinished(PIDAutotuner_t *pxPID); // Is the tuning finished?
 
-extern bool bPIDAutotunerIsFinished(PIDAutotuner_t *pxPIDAutotuner); // Is the tuning finished?
-
-extern void vPIDAutotunerSetAWMode(PIDAutotuner_t *pxPIDAutotuner, AWMode AW);
-extern void vPIDAutotunerSetKc(PIDAutotuner_t *pxPIDAutotuner, float kc);
-extern void vPIDAutotunerSetSimpleTime(PIDAutotuner_t *pxPIDAutotuner, float t);
-extern float fPIDAutotunerTuneUpdate(PIDAutotuner_t *pxPIDAutotuner,
+extern float fPIDAutotunerTuneUpdate(PIDAutotuner_t *pxPID,
                                      float setpoint, float measurement);
 
 #pragma pack()
