@@ -74,12 +74,12 @@ extern void vPIDAutotunerSetZNMode(PIDAutotuner_t *pxPID, ZNMode zn);
 extern void vPIDAutotunerSetTuningCycles(PIDAutotuner_t *pxPID, int tuneCycles);
 
 // Must be called immediately before the tuning loop starts
-extern void vPIDAutotunerStartTuningLoop(PIDAutotuner_t *pxPID, unsigned int us);
+extern void vPIDAutotunerStartTuningLoop(PIDAutotuner_t *pxPID, unsigned int ms);
 
 // Automatically tune PID
 // This function must be run in a loop at the same speed as the PID loop being tuned
 // See README for more details - https://github.com/jackw01/arduino-pid-autotuner/blob/master/README.md
-extern float fPIDAutotunerTunePID(PIDAutotuner_t *pxPID, float input, unsigned int us);
+extern float fPIDAutotunerTunePID(PIDAutotuner_t *pxPID, float input, unsigned int ms);
 
 // Get results of most recent tuning
 extern float fPIDAutotunerGetKp(PIDAutotuner_t *pxPID);
