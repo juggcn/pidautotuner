@@ -8,7 +8,7 @@ void vPIDAutotunerInit(PIDAutotuner_t *pxPID)
 {
   pxPID->targetInputValue = 0;
   pxPID->loopInterval = 0;
-  pxPID->znMode = ZNModeNoOvershoot;
+  pxPID->znMode = ZNModeBasicPID;
   pxPID->cycles = 10;
 
   pxPID->outputValue = 0.0f;
@@ -25,7 +25,7 @@ void vPIDAutotunerSetTargetInputValue(PIDAutotuner_t *pxPID, float target)
 }
 
 // Set loop interval
-void vPIDAutotunerSetLoopInterval(PIDAutotuner_t *pxPID, unsigned int interval)
+void vPIDAutotunerSetLoopInterval(PIDAutotuner_t *pxPID, int interval)
 {
   pxPID->loopInterval = interval;
 }
@@ -47,13 +47,13 @@ void vPIDAutotunerSetZNMode(PIDAutotuner_t *pxPID, ZNMode zn)
 }
 
 // Set tuning cycles
-void vPIDAutotunerSetTuningCycles(PIDAutotuner_t *pxPID, unsigned int tuneCycles)
+void vPIDAutotunerSetTuningCycles(PIDAutotuner_t *pxPID, int tuneCycles)
 {
   pxPID->cycles = tuneCycles;
 }
 
 // Initialize all variables before loop
-void vPIDAutotunerStartTuningLoop(PIDAutotuner_t *pxPID, long long us)
+void vPIDAutotunerStartTuningLoop(PIDAutotuner_t *pxPID, unsigned int us)
 {
   pxPID->i = 0;      // Cycle counter
   pxPID->output = 1; // Current output state
@@ -66,7 +66,7 @@ void vPIDAutotunerStartTuningLoop(PIDAutotuner_t *pxPID, long long us)
 }
 
 // Run one cycle of the loop
-float fPIDAutotunerTunePID(PIDAutotuner_t *pxPID, float input, long long us)
+float fPIDAutotunerTunePID(PIDAutotuner_t *pxPID, float input, unsigned int us)
 {
   // Useful information on the algorithm used (Ziegler-Nichols method/Relay method)
   // http://www.processcontrolstuff.net/wp-content/uploads/2015/02/relay_autot-2.pdf
