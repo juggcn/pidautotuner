@@ -4,14 +4,37 @@
 
 #include "pidautotuner.h"
 
-void vPIDAutotunerInit(PIDAutotuner_t *pxPID)
+void vPIDAutotunerReset(PIDAutotuner_t *pxPID)
 {
-  pxPID->targetInputValue = 0;
-  pxPID->loopInterval = 0;
-  pxPID->znMode = ZNModeNoOvershoot;
-  pxPID->cycles = 10;
+  vPIDAutotunerStartTuningLoop(pxPID, 0);
 
   pxPID->outputValue = 0.0f;
+
+  pxPID->integrator = 0.0f;
+  pxPID->prevError = 0.0f;
+  pxPID->differentiator = 0.0f;
+  pxPID->prevMeasurement = 0.0f;
+}
+
+void vPIDAutotunerInit(PIDAutotuner_t *pxPID,
+                       float kp,
+                       float ki,
+                       float kd,
+                       float min,
+                       float max,
+                       float target,
+                       ZNMode zn,
+                       int tuneCycles)
+{
+  pxPID->targetInputValue = target;
+  pxPID->minOutput = min;
+  pxPID->maxOutput = max;
+  pxPID->znMode = zn;
+  pxPID->cycles = tuneCycles;
+
+  pxPID->kp = kp;
+  pxPID->ki = ki;
+  pxPID->kd = kd;
 
   pxPID->tau = 0.5f;
 
@@ -20,21 +43,13 @@ void vPIDAutotunerInit(PIDAutotuner_t *pxPID)
 
   pxPID->T = 1.0f;
 
-  pxPID->integrator = 0.0f;
-  pxPID->prevError = 0.0f;
-  pxPID->differentiator = 0.0f;
-  pxPID->prevMeasurement = 0.0f;
+  vPIDAutotunerReset(pxPID);
 }
+
 // Set target input for tuning
 void vPIDAutotunerSetTargetInputValue(PIDAutotuner_t *pxPID, float target)
 {
   pxPID->targetInputValue = target;
-}
-
-// Set loop interval
-void vPIDAutotunerSetLoopInterval(PIDAutotuner_t *pxPID, int interval)
-{
-  pxPID->loopInterval = interval;
 }
 
 // Set output range
@@ -60,20 +75,20 @@ void vPIDAutotunerSetTuningCycles(PIDAutotuner_t *pxPID, int tuneCycles)
 }
 
 // Initialize all variables before loop
-void vPIDAutotunerStartTuningLoop(PIDAutotuner_t *pxPID, unsigned int ms)
+void vPIDAutotunerStartTuningLoop(PIDAutotuner_t *pxPID, float tm)
 {
   pxPID->i = 0;      // Cycle counter
   pxPID->output = 0; // Current output state
   pxPID->outputValue = pxPID->maxOutput;
-  pxPID->t1 = pxPID->t2 = ms;                           // Times used for calculating period
-  pxPID->microseconds = pxPID->tHigh = pxPID->tLow = 0; // More time variables
-  pxPID->max = -100000000;                              // Max input
-  pxPID->min = 100000000;                               // Min input
+  pxPID->t1 = pxPID->t2 = tm;                      // Times used for calculating period
+  pxPID->seconds = pxPID->tHigh = pxPID->tLow = 0; // More time variables
+  pxPID->max = -100000000;                         // Max input
+  pxPID->min = 100000000;                          // Min input
   pxPID->pAverage = pxPID->iAverage = pxPID->dAverage = 0;
 }
 
 // Run one cycle of the loop
-float fPIDAutotunerTunePID(PIDAutotuner_t *pxPID, float input, unsigned int ms)
+float fPIDAutotunerTunePID(PIDAutotuner_t *pxPID, float input, float tm)
 {
   // Useful information on the algorithm used (Ziegler-Nichols method/Relay method)
   // http://www.processcontrolstuff.net/wp-content/uploads/2015/02/relay_autot-2.pdf
@@ -93,9 +108,9 @@ float fPIDAutotunerTunePID(PIDAutotuner_t *pxPID, float input, unsigned int ms)
   //      Ziegler-Nichols method
 
   // Calculate time delta
-  // long prevMicroseconds = microseconds;
-  pxPID->microseconds = ms;
-  // float deltaT = microseconds - prevMicroseconds;
+  // long prevseconds = seconds;
+  pxPID->seconds += tm;
+  // float deltaT = seconds - prevseconds;
 
   // Calculate max and min
   pxPID->max = (pxPID->max > input) ? pxPID->max : input;
@@ -107,7 +122,7 @@ float fPIDAutotunerTunePID(PIDAutotuner_t *pxPID, float input, unsigned int ms)
     // Turn output off, record current time as t1, calculate tHigh, and reset maximum
     pxPID->output = 0;
     pxPID->outputValue = pxPID->minOutput;
-    pxPID->t1 = ms;
+    pxPID->t1 = pxPID->seconds;
     pxPID->tHigh = pxPID->t1 - pxPID->t2;
     pxPID->max = pxPID->targetInputValue;
   }
@@ -118,7 +133,7 @@ float fPIDAutotunerTunePID(PIDAutotuner_t *pxPID, float input, unsigned int ms)
     // Turn output on, record current time as t2, calculate tLow
     pxPID->output = 1;
     pxPID->outputValue = pxPID->maxOutput;
-    pxPID->t2 = ms;
+    pxPID->t2 = pxPID->seconds;
     pxPID->tLow = pxPID->t2 - pxPID->t1;
 
     // Calculate Ku (ultimate gain)
@@ -170,8 +185,8 @@ float fPIDAutotunerTunePID(PIDAutotuner_t *pxPID, float input, unsigned int ms)
 
     // Calculate gains
     pxPID->kp = kpConstant * ku;
-    pxPID->ki = (pxPID->kp / (tiConstant * tu)) * pxPID->loopInterval;
-    pxPID->kd = (tdConstant * pxPID->kp * tu) / pxPID->loopInterval;
+    pxPID->ki = (pxPID->kp / (tiConstant * tu));
+    pxPID->kd = (tdConstant * pxPID->kp * tu);
 
     // Average all gains after the first two cycles
     if (pxPID->i > 1)
@@ -212,7 +227,7 @@ bool bPIDAutotunerIsFinished(PIDAutotuner_t *pxPID)
   return (pxPID->i >= pxPID->cycles);
 }
 
-float fPIDAutotunerTuneUpdate(PIDAutotuner_t *pxPID,
+float fPIDAutotunerUpdate(PIDAutotuner_t *pxPID,
                               float setpoint, float measurement)
 {
   /*
